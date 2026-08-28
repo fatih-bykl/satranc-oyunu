@@ -1,0 +1,23 @@
+{
+  "app_name": "Satranç Oyunu",
+  "version": "1.0.0",
+  "release_year": "2026",
+  "developer": {
+    "name": "Fatih Bıyıklı",
+    "title": "İnternet Sihirbazı Proje Kurucusu & Dijital Medya Uzmanı",
+    "email": "fathbykl@gmail.com",
+    "website": "https://www.internetsihirbazi.com",
+    "github": "https://github.com/fatih-bykl",
+    "linkedin": "https://www.linkedin.com/in/fthbykl/",
+    "x": "https://x.com/fathbykl",
+    "instagram": "https://www.instagram.com/f.t.h.b.y.k.l",
+    "facebook": "https://www.facebook.com/fathbykl/",
+    "whatsapp": "https://wa.me/905538460082",
+    "steam": "https://steamcommunity.com/id/trgorkisteam/",
+    "spotify": "https://open.spotify.com/user/fatihbykl",
+    "reddit": "https://www.reddit.com/user/fatihbykl/",
+    "tiktok": "https://www.tiktok.com/@fatih.b.y.k.l",
+    "bio": "Dijital dünyanın sınırlarını zorlamayı ve web teknolojilerini bir sanata dönüştürmeyi hedefleyen bir girişimci. İnternet Sihirbazı projesinin kurucusu olarak; modern web tasarımı, içerik yönetimi, SEO ve yapay zeka entegrasyonları alanında yenilikçi projeler geliştiriyor."
+  },
+  "description": "Linux ortamında Visual Studio Code ile geliştirilmiş; özel PNG taş setlerini, Stockfish UCI satranç motorunu ve Google Gemini / Ollama gibi yapay zeka dil modellerini destekleyen modern masaüstü satranç oyunu."
+}

@@ -1,0 +1,29 @@
+{
+  "total_games": 2,
+  "wins": 2,
+  "losses": 0,
+  "draws": 0,
+  "total_play_time_seconds": 436.86777114868164,
+  "total_moves_played": 110,
+  "fastest_win_seconds": 164.9,
+  "matches": [
+    {
+      "date": "2026-08-28 18:19",
+      "opponent": "Yerleşik Kolay Yapay Zeka (Acemi)",
+      "result": "win",
+      "reason": "Şah Mat! Beyaz kazandı.",
+      "duration_seconds": 271.9,
+      "moves_count": 55,
+      "player_color": "Beyaz"
+    },
+    {
+      "date": "2026-08-28 18:15",
+      "opponent": "Yerleşik Kolay Yapay Zeka (Acemi)",
+      "result": "win",
+      "reason": "Şah Mat! Beyaz kazandı.",
+      "duration_seconds": 164.9,
+      "moves_count": 55,
+      "player_color": "Beyaz"
+    }
+  ]
+}

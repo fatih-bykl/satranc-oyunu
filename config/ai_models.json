@@ -1,0 +1,71 @@
+{
+  "active_model_id": "builtin_easy",
+  "models": [
+    {
+      "id": "builtin_easy",
+      "name": "Yerleşik Kolay Yapay Zeka (Acemi)",
+      "type": "builtin",
+      "difficulty": "easy",
+      "description": "Temel kuralları bilen ve rastgele/basit taktiklerle oynayan yapay zeka.",
+      "enabled": true
+    },
+    {
+      "id": "builtin_medium",
+      "name": "Yerleşik Orta Yapay Zeka (Kulüp Oyuncusu)",
+      "type": "builtin",
+      "difficulty": "medium",
+      "description": "3 hamle derinliğinde minimax ve pozisyonel değerlendirme yapan yerel yapay zeka.",
+      "enabled": true
+    },
+    {
+      "id": "builtin_hard",
+      "name": "Yerleşik Usta Yapay Zeka (Zor)",
+      "type": "builtin",
+      "difficulty": "hard",
+      "description": "Taş kare tabloları ve alpha-beta budaması kullanan güçlü yerleşik motor.",
+      "enabled": true
+    },
+    {
+      "id": "stockfish_uci",
+      "name": "Stockfish (UCI Motoru)",
+      "type": "uci",
+      "executable_path": "/usr/bin/stockfish",
+      "depth": 15,
+      "time_limit": 1.5,
+      "skill_level": 20,
+      "description": "Sisteminizde yüklü olan profesyonel Stockfish satranç motoru.",
+      "enabled": false
+    },
+    {
+      "id": "gemini_flash",
+      "name": "Google Gemini 2.5 Flash",
+      "type": "gemini",
+      "model_name": "gemini-2.5-flash",
+      "api_key": "",
+      "persona": "Sen profesyonel, agresif taktikleri seven bir satranç büyükustasısın. Hamleni seç ve kısa, esprili bir yorum yap.",
+      "description": "Google Gemini API ile düşünen ve oynarken yorum yapan yapay zeka.",
+      "enabled": false
+    },
+    {
+      "id": "ollama_local",
+      "name": "Ollama (Yerel LLM - Llama3 / Mistral)",
+      "type": "ollama",
+      "endpoint_url": "http://localhost:11434",
+      "model_name": "llama3:latest",
+      "persona": "Sen stratejik düşünen bilge bir satranç ustasısın. En iyi hamleyi bul ve hamlenin ardındaki düşünceyi kısaca açıkla.",
+      "description": "Kendi bilgisayarınızda Ollama üzerinden çalışan yerel dil modeli.",
+      "enabled": false
+    },
+    {
+      "id": "openai_gpt",
+      "name": "OpenAI GPT-4o Mini / Uyumlu API",
+      "type": "openai",
+      "base_url": "https://api.openai.com/v1",
+      "api_key": "",
+      "model_name": "gpt-4o-mini",
+      "persona": "Sen hızlı ve keskin taktikler kuran bir satranç şampiyonusun.",
+      "description": "OpenAI veya uyumlu (DeepSeek, Groq, OpenRouter vb.) API uç noktası.",
+      "enabled": false
+    }
+  ]
+}
