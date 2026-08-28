@@ -6,19 +6,16 @@ Bu belge, **Satranç Oyunu** masaüstü uygulamasını **Linux** ve **Windows** 
 
 ## 🪟 Windows Kurulum & Çalıştırma Rehberi
 
-### Gereksinimler:
-- **Windows 10 / 11** (64-bit)
-- **Python 3.10 veya daha yeni bir sürüm** ([python.org](https://www.python.org/downloads/) adresinden indirilebilir. *Kurulum sırasında "Add python.exe to PATH" seçeneğini işaretlemeyi unutmayın.*)
+### 1. Yöntem: Standart Kurulum Sihirbazı (.exe) - (ÖNERİLEN)
+1. **[Satranc-Oyunu-Kurulum.exe](https://github.com/fatih-bykl/satranc-oyunu/releases/download/v1.0.0/Satranc-Oyunu-Kurulum.exe)** dosyasını indirin.
+2. İndirdiğiniz `.exe` dosyasına çift tıklayın.
+3. Kurulum sihirbazı otomatik olarak açılır ve varsayılan olarak **`C:\Satranç Oyunu`** klasörüne tüm bağımsız çalışma ortamıyla birlikte kurulumu yapar.
+4. **Masaüstünüze ve Başlat Menünüze** otomatik olarak "Satranç Oyunu" kısayolu yerleştirilir.
+5. Bilgisayarınızda Python veya başka hiçbir ek yazılım yüklü olmasına **gerek yoktur**, oyun doğrudan başlar!
 
-### 1. Yöntem: Tek Tıkla Masaüstü Kısayolu Kurulumu (Önerilen)
-1. `Satranc-Oyunu-Windows-v1.0.0.zip` dosyasını bilgisayarınızda istediğiniz bir klasöre çıkartın.
-2. Klasör içindeki **`install-desktop.bat`** dosyasına çift tıklayın.
-3. Kurulum betiği gerekli sanal ortamı ve kütüphaneleri otomatik olarak kuracak ve **Masaüstünüze ile Başlat Menünüze "Satranç Oyunu" kısayolu** ekleyecektir.
-4. Artık masaüstündeki ikona tıklayarak oyunu dilediğiniz zaman başlatabilirsiniz.
-
-### 2. Yöntem: Taşınabilir (Portable) Çalıştırma
-1. Klasör içerisindeki **`run.bat`** dosyasına çift tıklayın.
-2. Oyun otomatik olarak açılacaktır.
+### 2. Yöntem: Taşınabilir (Portable Zip)
+1. `Satranc-Oyunu-Windows-v1.0.0.zip` dosyasını indirin ve klasöre çıkartın.
+2. Klasör içindeki `SatrancOyunu.exe` veya `run.bat` ile başlatın.
 
 ### 3. Yöntem: Visual Studio Code ile Geliştirici Modu
 1. **VS Code**'u açın ve `satranç` klasörünü seçin (`File -> Open Folder...`).
