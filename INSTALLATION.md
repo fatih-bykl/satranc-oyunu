@@ -9,13 +9,13 @@ Bu belge, **Satranç Oyunu** masaüstü uygulamasını **Linux** ve **Windows** 
 ### 1. Yöntem: Standart Kurulum Sihirbazı (.exe) - (ÖNERİLEN)
 1. **[Satranc-Oyunu-Kurulum.exe](https://github.com/fatih-bykl/satranc-oyunu/releases/download/v1.0.0/Satranc-Oyunu-Kurulum.exe)** dosyasını indirin.
 2. İndirdiğiniz `.exe` dosyasına çift tıklayın.
-3. Kurulum sihirbazı otomatik olarak açılır ve varsayılan olarak **`C:\Satranç Oyunu`** klasörüne tüm bağımsız çalışma ortamıyla birlikte kurulumu yapar.
+3. Kurulum sihirbazı otomatik olarak açılır ve varsayılan olarak **`C:\satrancoyunu`** klasörüne tüm bağımsız çalışma ortamıyla birlikte kurulumu yapar.
 4. **Masaüstünüze ve Başlat Menünüze** otomatik olarak "Satranç Oyunu" kısayolu yerleştirilir.
 5. Bilgisayarınızda Python veya başka hiçbir ek yazılım yüklü olmasına **gerek yoktur**, oyun doğrudan başlar!
 
 ### 2. Yöntem: Taşınabilir (Portable Zip)
-1. `Satranc-Oyunu-Windows-v1.0.0.zip` dosyasını indirin ve klasöre çıkartın.
-2. Klasör içindeki `SatrancOyunu.exe` veya `run.bat` ile başlatın.
+1. **[Satranc-Oyunu-Windows-v1.0.0.zip](https://github.com/fatih-bykl/satranc-oyunu/releases/download/v1.0.0/Satranc-Oyunu-Windows-v1.0.0.zip)** dosyasını indirin ve klasöre çıkartın.
+2. Klasör içindeki `run.bat` ile başlatın.
 
 ### 3. Yöntem: Visual Studio Code ile Geliştirici Modu
 1. **VS Code**'u açın ve `satranç` klasörünü seçin (`File -> Open Folder...`).
@@ -45,7 +45,7 @@ Bu belge, **Satranç Oyunu** masaüstü uygulamasını **Linux** ve **Windows** 
   ```
 
 ### 1. Yöntem: Masaüstü ve Uygulamalar Menüsüne Ekleme (Önerilen)
-1. İndirdiğiniz `Satranc-Oyunu-Linux-v1.0.0.tar.gz` veya `.zip` arşivini açın.
+1. İndirdiğiniz **[Satranc-Oyunu-Linux-v1.0.0.tar.gz](https://github.com/fatih-bykl/satranc-oyunu/releases/download/v1.0.0/Satranc-Oyunu-Linux-v1.0.0.tar.gz)** veya **[Satranc-Oyunu-Linux-v1.0.0.zip](https://github.com/fatih-bykl/satranc-oyunu/releases/download/v1.0.0/Satranc-Oyunu-Linux-v1.0.0.zip)** arşivini açın.
 2. Terminali klasörün içinde açıp şu komutu çalıştırın:
    ```bash
    ./install-desktop.sh
