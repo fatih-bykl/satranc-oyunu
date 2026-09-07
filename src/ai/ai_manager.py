@@ -1,12 +1,15 @@
 """
 Yapay Zeka Yöneticisi ve Arka Plan Hesaplama İş Parçacığı.
 Kullanıcı arayüzünün donmaması için AI hesaplamalarını QThread içinde yürütür.
+Zaman aşımı koruması (Watchdog Timer) ve hata durumunda otomatik yedek hamle (Fallback Move) içerir.
+Oyunun kilitlenmesini %100 engeller.
 """
 import os
 import json
+import random
 from typing import Dict, List, Any, Optional
 import chess
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
+from PyQt6.QtCore import QObject, QThread, QTimer, pyqtSignal
 
 from .base_ai import BaseAI, AIMoveResult
 from .heuristic_ai import HeuristicAI
@@ -25,13 +28,19 @@ class AICalculationWorker(QThread):
         self.ai_instance = ai_instance
         self.board_copy = board_copy
         self.move_history = move_history
+        self._is_aborted = False
+
+    def abort(self):
+        self._is_aborted = True
 
     def run(self):
         try:
             result = self.ai_instance.get_move(self.board_copy, self.move_history)
-            self.move_ready.emit(result)
+            if not self._is_aborted:
+                self.move_ready.emit(result)
         except Exception as e:
-            self.error_occurred.emit(str(e))
+            if not self._is_aborted:
+                self.error_occurred.emit(str(e))
 
 class AIManager(QObject):
     """Tüm AI modellerini yöneten merkezi sınıf."""
@@ -48,6 +57,12 @@ class AIManager(QObject):
         self.active_model_id: str = "builtin_medium"
         self._current_worker: Optional[AICalculationWorker] = None
         self._cached_instances: Dict[str, BaseAI] = {}
+        self._last_board: Optional[chess.Board] = None
+
+        # Watchdog Timer: AI yanıt vermezse kilidi çözer
+        self._watchdog_timer = QTimer(self)
+        self._watchdog_timer.setSingleShot(True)
+        self._watchdog_timer.timeout.connect(self._on_watchdog_timeout)
 
         self.load_models()
 
@@ -133,12 +148,21 @@ class AIManager(QObject):
 
     def request_move(self, board: chess.Board, move_history: List[str]):
         """Aktif modelden arka planda hamle talep eder."""
+        legal_moves = list(board.legal_moves)
+        if not legal_moves:
+            self.move_ready.emit(AIMoveResult(move_uci="", move_san="", thoughts="Geçerli hamle kalmadı."))
+            return
+
+        self._last_board = board.copy()
+
         active_config = self.get_active_model_info()
         if not active_config:
-            self.calculation_failed.emit("Aktif yapay zeka modeli bulunamadı.")
+            # Model yoksa doğrudan hızlı yedek hamle üret
+            self._emit_fallback_move(board, "Varsayılan yapay zeka hamlesi.")
             return
 
         model_id = active_config.get("id", "default")
+        ai_type = active_config.get("type", "builtin")
         
         # Instance önbelleğe al veya yenisini üret
         if model_id not in self._cached_instances:
@@ -148,6 +172,11 @@ class AIManager(QObject):
         
         self.calculation_started.emit(ai_inst.name)
 
+        # Önceki worker varsa durdur
+        if self._current_worker and self._current_worker.isRunning():
+            self._current_worker.abort()
+            self._current_worker.wait(200)
+
         board_copy = board.copy()
         history_copy = list(move_history)
 
@@ -156,11 +185,64 @@ class AIManager(QObject):
         self._current_worker.error_occurred.connect(self._on_worker_error)
         self._current_worker.start()
 
+        # Watchdog zaman aşımı süresi: Yerleşik için 3.5 sn, Harici/LLM için 8.0 sn
+        timeout_ms = 3500 if ai_type == "builtin" else 8000
+        self._watchdog_timer.start(timeout_ms)
+
     def _on_worker_move_ready(self, result: AIMoveResult):
+        self._watchdog_timer.stop()
+        
+        # Hamle geçerliliğini doğrula
+        if self._last_board:
+            try:
+                move = chess.Move.from_uci(result.move_uci)
+                if move not in self._last_board.legal_moves:
+                    # Model geçersiz bir UCI hamlesi dönerse güvenli yasal hamleye geç
+                    self._emit_fallback_move(self._last_board, "Yedek yasal hamle uygulandı.")
+                    return
+            except Exception:
+                self._emit_fallback_move(self._last_board, "Yedek yasal hamle uygulandı.")
+                return
+
         self.move_ready.emit(result)
 
     def _on_worker_error(self, err: str):
-        self.calculation_failed.emit(err)
+        self._watchdog_timer.stop()
+        print(f"[AIManager] AI Hatası: {err}")
+        # Hata durumunda oyunu durdurma! Otomatik yedek hamle ile akışı sürdür
+        if self._last_board and not self._last_board.is_game_over():
+            self._emit_fallback_move(self._last_board, f"Otomatik kurtarma hamlesi yapıldı ({err})")
+        else:
+            self.calculation_failed.emit(err)
+
+    def _on_watchdog_timeout(self):
+        """AI beklenen sürede yanıt vermezse devreye girer ve kilidi açar."""
+        print("[AIManager] Watchdog zaman aşımı devreye girdi. Otomatik hamle yapılıyor.")
+        if self._current_worker and self._current_worker.isRunning():
+            self._current_worker.abort()
+
+        if self._last_board and not self._last_board.is_game_over():
+            self._emit_fallback_move(self._last_board, "Zaman aşımı koruması: Hızlı hamle yapıldı.")
+
+    def _emit_fallback_move(self, board: chess.Board, reason: str):
+        """Her zaman geçerli ve hızlı bir taktiksel/yasal hamle üretir."""
+        legal = list(board.legal_moves)
+        if not legal:
+            self.move_ready.emit(AIMoveResult(move_uci="", move_san="", thoughts="Geçerli hamle kalmadı."))
+            return
+
+        # Taş alımı veya şah çeken hamleleri öncelikle seç
+        captures = [m for m in legal if board.is_capture(m) or board.gives_check(m)]
+        chosen = random.choice(captures) if captures else random.choice(legal)
+        san = board.san(chosen)
+
+        self.move_ready.emit(AIMoveResult(
+            move_uci=chosen.uci(),
+            move_san=san,
+            eval_score=0.0,
+            thoughts=reason,
+            time_spent=0.01
+        ))
 
     def add_or_update_model(self, model_config: Dict[str, Any]):
         model_id = model_config.get("id")
@@ -175,7 +257,6 @@ class AIManager(QObject):
         else:
             self.models_data.append(model_config)
 
-        # Cache temizle
         if model_id in self._cached_instances:
             self._cached_instances[model_id].cleanup()
             del self._cached_instances[model_id]
@@ -192,6 +273,10 @@ class AIManager(QObject):
         self.save_models()
 
     def cleanup(self):
+        self._watchdog_timer.stop()
+        if self._current_worker and self._current_worker.isRunning():
+            self._current_worker.abort()
+            self._current_worker.wait(300)
         for inst in self._cached_instances.values():
             inst.cleanup()
         self._cached_instances.clear()

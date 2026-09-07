@@ -1,7 +1,8 @@
 """
 Yerleşik Python Heuristic Satranç Motoru.
 İnternet bağlantısı, API anahtarı veya harici ikili dosya gerektirmeden çalışır.
-Minimax + Alpha-Beta Budama ve Taş-Kare Tabloları (PST) kullanır.
+Zaman Bütçeli İteratif Derinleşme (Iterative Deepening) + Alpha-Beta Budaması ve Taş-Kare Tabloları (PST) kullanır.
+Asla kilitlenmez, donmaz ve maksimum 0.5 - 1.0 saniye içinde en iyi hamleyi döner.
 """
 import time
 import random
@@ -96,7 +97,7 @@ PST_TABLES = {
 }
 
 class HeuristicAI(BaseAI):
-    """Yerleşik Heuristic satranç motoru."""
+    """Yerleşik Heuristic satranç motoru - Hızlı, güvenli ve kilitlenmeyen motor."""
 
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
@@ -108,15 +109,32 @@ class HeuristicAI(BaseAI):
         if not legal_moves:
             return AIMoveResult(move_uci="", move_san="", thoughts="Geçerli hamle kalmadı.")
 
+        # Tek yasal hamle varsa doğrudan oyna (0 saniye)
+        if len(legal_moves) == 1:
+            best_move = legal_moves[0]
+            san_move = board.san(best_move)
+            return AIMoveResult(
+                move_uci=best_move.uci(),
+                move_san=san_move,
+                eval_score=0.0,
+                thoughts="Zorunlu tek hamle yapıldı.",
+                time_spent=time.time() - start_time
+            )
+
         if self.difficulty == "easy":
             best_move, score = self._get_easy_move(board, legal_moves)
-            thoughts = "Kolay mod: Basit taktikler ve hızlı hamleler seçildi."
+            thoughts = "Kolay mod: Hızlı ve basit taktik hamle seçildi."
         elif self.difficulty == "medium":
-            best_move, score = self._get_minimax_move(board, depth=3)
-            thoughts = "Orta seviye: 3 hamle ilerisi ve materyal dengesi analiz edildi."
+            best_move, score = self._get_iterative_move(board, max_depth=3, time_limit=0.45)
+            thoughts = "Orta seviye: 3 hamle derinliği ve pozisyon dengesi analiz edildi."
         else:  # hard
-            best_move, score = self._get_minimax_move(board, depth=4)
+            best_move, score = self._get_iterative_move(board, max_depth=4, time_limit=0.90)
             thoughts = "Zor seviye: Taş-kare tabloları ve alpha-beta budaması ile derin hesap yapıldı."
+
+        # Herhangi bir nedenle hamle None olursa ilk yasal hamleye dön
+        if best_move is None or best_move not in board.legal_moves:
+            best_move = legal_moves[0]
+            score = 0
 
         elapsed = time.time() - start_time
         san_move = board.san(best_move)
@@ -131,7 +149,7 @@ class HeuristicAI(BaseAI):
         )
 
     def _get_easy_move(self, board: chess.Board, legal_moves: List[chess.Move]) -> Tuple[chess.Move, int]:
-        # Taş alımı veya şah çeken hamleleri %50 ihtimalle tercih et, yoksa rastgele
+        """Kolay mod: Anlık taş alımı veya basit hamle."""
         captures_and_checks = [m for m in legal_moves if board.is_capture(m) or board.gives_check(m)]
         if captures_and_checks and random.random() < 0.6:
             chosen = random.choice(captures_and_checks)
@@ -139,42 +157,100 @@ class HeuristicAI(BaseAI):
             chosen = random.choice(legal_moves)
         return chosen, 0
 
-    def _get_minimax_move(self, board: chess.Board, depth: int) -> Tuple[chess.Move, int]:
+    def _get_iterative_move(self, board: chess.Board, max_depth: int, time_limit: float) -> Tuple[chess.Move, int]:
+        """
+        Zaman Bütçeli İteratif Derinleşme (Iterative Deepening).
+        Önce 1. derinliği, sonra 2. derinliği hesaplar.
+        Süre dolarsa eldeki en son tamamlanmış en iyi hamleyi hemen döner.
+        """
+        start_time = time.time()
+        legal_moves = list(board.legal_moves)
+        best_overall_move = legal_moves[0]
+        best_overall_score = 0
+
+        ordered_moves = self._order_moves(board, legal_moves)
+
+        for current_depth in range(1, max_depth + 1):
+            move, score, aborted = self._search_root(board, ordered_moves, current_depth, start_time, time_limit)
+            if move is not None and not aborted:
+                best_overall_move = move
+                best_overall_score = score
+            
+            # Zaman sınırına yaklaşıldıysa daha derin aramayı başlatma
+            if aborted or (time.time() - start_time) >= time_limit * 0.8:
+                break
+
+        return best_overall_move, best_overall_score
+
+    def _search_root(
+        self,
+        board: chess.Board,
+        moves: List[chess.Move],
+        depth: int,
+        start_time: float,
+        time_limit: float
+    ) -> Tuple[Optional[chess.Move], int, bool]:
+        """Kök seviyesinde alpha-beta araması."""
         is_white = (board.turn == chess.WHITE)
         best_move = None
         alpha = -1000000
         beta = 1000000
 
-        ordered_moves = self._order_moves(board, list(board.legal_moves))
-        
         if is_white:
             max_eval = -1000000
-            for move in ordered_moves:
+            for move in moves:
+                if (time.time() - start_time) > time_limit:
+                    return best_move, max_eval, True
+
                 board.push(move)
-                eval_val = self._alpha_beta(board, depth - 1, alpha, beta, False)
+                eval_val = self._alpha_beta(board, depth - 1, alpha, beta, False, start_time, time_limit)
                 board.pop()
+
+                if eval_val is None:  # Süre doldu
+                    return best_move, max_eval, True
+
                 if eval_val > max_eval:
                     max_eval = eval_val
                     best_move = move
                 alpha = max(alpha, eval_val)
                 if beta <= alpha:
                     break
-            return best_move or ordered_moves[0], max_eval
+            return best_move, max_eval, False
         else:
             min_eval = 1000000
-            for move in ordered_moves:
+            for move in moves:
+                if (time.time() - start_time) > time_limit:
+                    return best_move, min_eval, True
+
                 board.push(move)
-                eval_val = self._alpha_beta(board, depth - 1, alpha, beta, True)
+                eval_val = self._alpha_beta(board, depth - 1, alpha, beta, True, start_time, time_limit)
                 board.pop()
+
+                if eval_val is None:  # Süre doldu
+                    return best_move, min_eval, True
+
                 if eval_val < min_eval:
                     min_eval = eval_val
                     best_move = move
                 beta = min(beta, eval_val)
                 if beta <= alpha:
                     break
-            return best_move or ordered_moves[0], min_eval
+            return best_move, min_eval, False
 
-    def _alpha_beta(self, board: chess.Board, depth: int, alpha: int, beta: int, is_maximizing: bool) -> int:
+    def _alpha_beta(
+        self,
+        board: chess.Board,
+        depth: int,
+        alpha: int,
+        beta: int,
+        is_maximizing: bool,
+        start_time: float,
+        time_limit: float
+    ) -> Optional[int]:
+        """Zaman kontrollü Alpha-Beta araması."""
+        if (time.time() - start_time) > time_limit:
+            return None
+
         if depth == 0 or board.is_game_over():
             return self._evaluate_board(board)
 
@@ -184,8 +260,12 @@ class HeuristicAI(BaseAI):
             max_eval = -1000000
             for move in ordered_moves:
                 board.push(move)
-                eval_val = self._alpha_beta(board, depth - 1, alpha, beta, False)
+                eval_val = self._alpha_beta(board, depth - 1, alpha, beta, False, start_time, time_limit)
                 board.pop()
+
+                if eval_val is None:
+                    return None
+
                 max_eval = max(max_eval, eval_val)
                 alpha = max(alpha, eval_val)
                 if beta <= alpha:
@@ -195,8 +275,12 @@ class HeuristicAI(BaseAI):
             min_eval = 1000000
             for move in ordered_moves:
                 board.push(move)
-                eval_val = self._alpha_beta(board, depth - 1, alpha, beta, True)
+                eval_val = self._alpha_beta(board, depth - 1, alpha, beta, True, start_time, time_limit)
                 board.pop()
+
+                if eval_val is None:
+                    return None
+
                 min_eval = min(min_eval, eval_val)
                 beta = min(beta, eval_val)
                 if beta <= alpha:

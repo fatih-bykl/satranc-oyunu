@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import (
     QFrame, QSplitter, QSizePolicy, QProgressBar
 )
 from PyQt6.QtGui import QFont, QIcon, QAction, QKeySequence, QShortcut
-from PyQt6.QtCore import Qt, pyqtSlot
+from PyQt6.QtCore import Qt, pyqtSlot, QTimer
 
 from ..core.board_manager import BoardManager
 from ..core.timer_manager import ChessTimerManager
@@ -69,6 +69,13 @@ class MainWindow(QMainWindow):
         self.is_ai_game = True             # True: İnsan vs AI, False: İnsan vs İnsan
         self.game_active = False
         self.current_screen_mode = "standard"
+        self._ai_turn_request_time = 0.0
+
+        # Sıra & Kilitlenme Emniyet Zamanlayıcısı (Watchdog)
+        self._safety_timer = QTimer(self)
+        self._safety_timer.setInterval(1000)
+        self._safety_timer.timeout.connect(self._check_turn_safety)
+        self._safety_timer.start()
 
         self._init_ui()
         self._setup_shortcuts()
@@ -487,6 +494,7 @@ class MainWindow(QMainWindow):
         if not self.game_active:
             return
         
+        self._ai_turn_request_time = time.time()
         self.chess_board.interactive = False
         self.lbl_ai_status.setText("⏳ Düşünüyor...")
         self.lbl_mini_ai_thought.setText("⏳ Yapay Zeka düşünüyor...")
@@ -495,6 +503,7 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot(str)
     def _on_ai_started(self, model_name: str):
+        self._ai_turn_request_time = time.time()
         self.lbl_ai_status.setText(f"🤖 {model_name} analiz ediyor...")
         self.lbl_mini_ai_thought.setText(f"🤖 {model_name} analiz ediyor...")
 
@@ -504,6 +513,7 @@ class MainWindow(QMainWindow):
         if not self.game_active:
             return
 
+        self._ai_turn_request_time = 0.0
         self.chess_board.interactive = True
         self.lbl_ai_status.setText("✓ Hamle yapıldı.")
         
@@ -516,8 +526,15 @@ class MainWindow(QMainWindow):
 
         # Hamleyi tahtada uygula
         record = self.board_manager.make_uci_move(result.move_uci)
+        
+        # Eğer hamle geçersizse, ilk yasal hamleyi zorla uygula (oyun asla kilitlenemez)
+        if not record and not self.board_manager.board.is_game_over():
+            legal = list(self.board_manager.board.legal_moves)
+            if legal:
+                record = self.board_manager.make_move(legal[0])
+
         if record:
-            move = chess.Move.from_uci(result.move_uci)
+            move = chess.Move.from_uci(record.uci_move)
             self.chess_board.set_last_move(move)
             self._play_move_sound(record)
             self.move_history_widget.update_history()
@@ -532,14 +549,48 @@ class MainWindow(QMainWindow):
             is_over, reason, _ = self.board_manager.get_game_status()
             if is_over:
                 self._handle_game_over(reason)
+        
+        # Sıra oyuncudaysa etkileşimi kesinlikle etkinleştir
+        if self.board_manager.board.turn == self.human_color:
+            self.chess_board.interactive = True
+            self.chess_board.update()
 
     @pyqtSlot(str)
     def _on_ai_failed(self, error_msg: str):
+        self._ai_turn_request_time = 0.0
         self.chess_board.interactive = True
-        self.lbl_ai_status.setText("⚠️ AI Hatası!")
-        self.lbl_ai_thought.setText(f"Hata: {error_msg}")
-        self.lbl_mini_ai_thought.setText(f"Hata: {error_msg}")
-        QMessageBox.warning(self, "Yapay Zeka Hatası", f"Yapay zeka hamle üretemedi:\n{error_msg}")
+        self.lbl_ai_status.setText("⚠️ Otomatik Hamle")
+        self.lbl_ai_thought.setText("AI gecikmesi önlendi, otomatik hamle yapıldı.")
+        self.lbl_mini_ai_thought.setText("Otomatik hamle yapıldı.")
+        
+        # Oyunu kilitlemek yerine acil yasal hamle yap
+        if not self.board_manager.board.is_game_over():
+            legal = list(self.board_manager.board.legal_moves)
+            if legal:
+                record = self.board_manager.make_move(legal[0])
+                if record:
+                    self.chess_board.set_last_move(chess.Move.from_uci(record.uci_move))
+                    self._play_move_sound(record)
+                    self.move_history_widget.update_history()
+                    self.timer_manager.switch_turn(self.board_manager.turn)
+                    self._update_status_display()
+
+    def _check_turn_safety(self):
+        """Oyunun kilitlenmesini veya taşların donmasını önleyen emniyet denetleyicisi."""
+        if not self.game_active:
+            return
+
+        # Sıra insandaysa tahta etkileşiminin açık olmasını garanti et
+        if self.is_ai_game and self.board_manager.board.turn == self.human_color:
+            if not self.chess_board.interactive:
+                self.chess_board.interactive = True
+                self.chess_board.update()
+
+        # Sıra AI'daysa ve 4 saniyeden uzun süredir hamle gelmediyse kurtarma yap
+        elif self.is_ai_game and self.board_manager.board.turn != self.human_color:
+            if self._ai_turn_request_time > 0 and (time.time() - self._ai_turn_request_time) > 4.0:
+                self._ai_turn_request_time = time.time()
+                self._on_ai_failed("Emniyet zaman aşımı")
 
     def _play_move_sound(self, record):
         if not self.game_settings.get("sound_enabled", True):
