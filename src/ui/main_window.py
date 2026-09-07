@@ -487,7 +487,8 @@ class MainWindow(QMainWindow):
 
             # AI Sırası
             if self.is_ai_game and self.board_manager.board.turn != self.human_color:
-                self._trigger_ai_turn()
+                # Kullanıcı hamlesinin çizilmesini takiben yapay zekayı hemen ve akıcı tetikle
+                QTimer.singleShot(80, self._trigger_ai_turn)
 
     def _trigger_ai_turn(self):
         """Yapay zekanın hamle yapmasını talep eder."""
@@ -514,7 +515,6 @@ class MainWindow(QMainWindow):
             return
 
         self._ai_turn_request_time = 0.0
-        self.chess_board.interactive = True
         self.lbl_ai_status.setText("✓ Hamle yapıldı.")
         
         if result.thoughts:
@@ -534,7 +534,8 @@ class MainWindow(QMainWindow):
                 record = self.board_manager.make_move(legal[0])
 
         if record:
-            move = chess.Move.from_uci(record.uci_move)
+            move = chess.Move.from_uci(record.uci)
+            self.chess_board.clear_selection()
             self.chess_board.set_last_move(move)
             self._play_move_sound(record)
             self.move_history_widget.update_history()
@@ -546,13 +547,18 @@ class MainWindow(QMainWindow):
             self.timer_manager.switch_turn(self.board_manager.turn)
             self._update_status_display()
 
+            # Tahtayı anında ekranda zorla güncelle (fare tıklamasına gerek kalmadan görünsün)
+            self.chess_board.update()
+            self.chess_board.repaint()
+
             is_over, reason, _ = self.board_manager.get_game_status()
             if is_over:
                 self._handle_game_over(reason)
         
-        # Sıra oyuncudaysa etkileşimi kesinlikle etkinleştir
+        # Sıra oyuncudaysa etkileşimi kesinlikle etkinleştir ve çiz
         if self.board_manager.board.turn == self.human_color:
             self.chess_board.interactive = True
+            self.chess_board.clear_selection()
             self.chess_board.update()
 
     @pyqtSlot(str)
@@ -569,11 +575,13 @@ class MainWindow(QMainWindow):
             if legal:
                 record = self.board_manager.make_move(legal[0])
                 if record:
-                    self.chess_board.set_last_move(chess.Move.from_uci(record.uci_move))
+                    self.chess_board.set_last_move(chess.Move.from_uci(record.uci))
                     self._play_move_sound(record)
                     self.move_history_widget.update_history()
                     self.timer_manager.switch_turn(self.board_manager.turn)
                     self._update_status_display()
+                    self.chess_board.update()
+                    self.chess_board.repaint()
 
     def _check_turn_safety(self):
         """Oyunun kilitlenmesini veya taşların donmasını önleyen emniyet denetleyicisi."""

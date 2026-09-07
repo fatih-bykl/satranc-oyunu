@@ -13,6 +13,8 @@ class MoveRecord:
                  captured_piece_type: Optional[int] = None, is_check: bool = False, is_mate: bool = False):
         self.uci = uci_move
         self.san = san_move
+        self.uci_move = uci_move
+        self.san_move = san_move
         self.piece_type = piece_type
         self.color = color  # True: White, False: Black
         self.captured_piece_type = captured_piece_type

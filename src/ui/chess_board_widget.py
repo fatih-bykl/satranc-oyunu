@@ -388,8 +388,9 @@ class ChessBoardWidget(QWidget):
         self.update()
 
     def _find_matching_move(self, from_sq: int, to_sq: int) -> Optional[chess.Move]:
+        all_legals = self.board_manager.get_legal_moves_from(from_sq)
         legal_candidates = [
-            m for m in self.legal_moves_for_selected 
+            m for m in all_legals
             if m.from_square == from_sq and m.to_square == to_sq
         ]
         if not legal_candidates:
@@ -414,4 +415,6 @@ class ChessBoardWidget(QWidget):
 
     def _handle_move_execution(self, move: chess.Move):
         self.clear_selection()
+        self.update()
+        self.repaint()
         self.move_made.emit(move)
